@@ -45,8 +45,9 @@ php artisan pvtl-csv-importer:example
 1. You extend `CsvImporterService` and define your columns, validation rules, and handler logic.
 2. You instantiate your service class with a file stream resource. The import starts immediately.
 3. One `CsvRowImportJob` is dispatched to the queue **per row**.
-4. Each job validates the row, calls your `handleRow()` on success, or `handleValidationError()` on failure.
-5. When the last row's job runs, `handleImportCompletion()` is called.
+4. Each job calls `transformRow()` to normalise the raw row, then validates it against your `$columns` rules.
+5. On success `handleRow()` is called; on failure `handleValidationError()` is called.
+6. When the last row's job runs, `handleImportCompletion()` is called.
 
 ---
 
@@ -72,6 +73,15 @@ class UserImporterService extends CsvImporterService
      * Also used as the filename slug for the downloadable example CSV.
      */
     public const string IMPORT_LABEL = 'User Import';
+
+    /**
+     * The field delimiter used when parsing the CSV file.
+     * Defaults to comma. Override for other formats:
+     *   "\t" → TSV (tab-separated)
+     *   ";"  → semicolon (common in European Excel exports)
+     *   "|"  → pipe-delimited
+     */
+    // protected string $delimiter = ',';
 
     /**
      * Define which CSV columns to accept and their Laravel validation rules.
@@ -186,6 +196,21 @@ public static function handleRow(CsvImportData $data): void
 ## 3. Overridable Methods
 
 Beyond the two abstract methods you **must** implement, there are additional methods with default behaviour that you can override in your subclass.
+
+### `transformRow(array $row, CsvImportData $data): array` *(overridable)*
+
+Called before validation runs, once per row. Use it to normalise, clean, or reshape cell values. The `$row` array contains **all CSV columns** at this point — it has not yet been filtered to `$columns`. Must return the (modified) row array.
+
+```php
+public static function transformRow(array $row, CsvImportData $data): array
+{
+    $row['Email'] = strtolower(trim($row['Email'] ?? ''));
+    $row['Phone'] = preg_replace('/\D/', '', $row['Phone'] ?? '');
+    $row['Name']  = ucwords(strtolower($row['Name'] ?? ''));
+
+    return $row;
+}
+```
 
 ### `handleRow(CsvImportData $data): void` *(abstract — must implement)*
 
@@ -306,6 +331,7 @@ Every callback receives a `CsvImportData` instance with the following properties
 | `$columns` | `array` | The column definitions (name => rules) from your service class. |
 | `$import_id` | `string` | A UUID unique to this import run. Use it to group `FailedImportCsvRow` records. |
 | `$is_last_row` | `bool` | `true` if this is the final row in the CSV file. |
+| `$row_number` | `int` | 1-indexed position of the row in the file, excluding the header row. |
 | `$options` | `array` | The options array passed to the constructor. |
 
 ---
