@@ -42,6 +42,12 @@ abstract class CsvImporterService
     protected string $importId;
 
     /**
+     * The field delimiter character used when parsing the CSV file.
+     * Defaults to comma. Override to support TSV ("\t"), semicolon (";"), etc.
+     */
+    protected string $delimiter = ',';
+
+    /**
      * The stream recourse of the CSV file.
      *
      * @type resource
@@ -94,7 +100,7 @@ abstract class CsvImporterService
 
         $filesize = fstat($this->stream)['size'] ?? 0;
 
-        $header = fgetcsv($this->stream);
+        $header = fgetcsv($this->stream, separator: $this->delimiter);
 
         if ($header === false) {
             fclose($this->stream);
@@ -109,7 +115,9 @@ abstract class CsvImporterService
 
         $header = array_map(fn ($value) => trim($this->toUtf8($value)), $header);
 
-        while (($row = fgetcsv($this->stream)) !== false) {
+        $rowNumber = 0;
+
+        while (($row = fgetcsv($this->stream, separator: $this->delimiter)) !== false) {
             if (count($row) < count($header)) {
                 continue;
             }
@@ -118,6 +126,7 @@ abstract class CsvImporterService
                 $row = array_slice($row, 0, count($header));
             }
 
+            $rowNumber++;
             $row = array_combine($header, $row);
             $isLast = ftell($this->stream) >= $filesize;
 
@@ -125,6 +134,7 @@ abstract class CsvImporterService
                 [static::class, 'handleRow'],
                 [static::class, 'handleValidationError'],
                 [static::class, 'handleImportCompletion'],
+                [static::class, 'transformRow'],
                 CsvImportData::from([
                     'row' => collect($row)->mapWithKeys(
                         fn ($value, $key) => [trim($key) => trim($this->toUtf8($value))]
@@ -133,6 +143,7 @@ abstract class CsvImporterService
                     'columns' => $this->columns,
                     'import_id' => $this->importId,
                     'is_last_row' => $isLast,
+                    'row_number' => $rowNumber,
                 ])
             );
         }
@@ -185,6 +196,19 @@ abstract class CsvImporterService
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename={$filename}.csv",
         ]);
+    }
+
+    /**
+     * Transforms a row's values before validation runs.
+     *
+     * Override this method to normalise, clean, or reshape cell values.
+     * Receives the raw row array (all CSV columns, keyed by header name)
+     * and the full CsvImportData context (for access to $data->options, etc.).
+     * Must return the transformed row array.
+     */
+    public static function transformRow(array $row, CsvImportData $data): array
+    {
+        return $row;
     }
 
     /**

@@ -31,6 +31,11 @@ class CsvRowImportJob implements ShouldQueue
     public $callbackImportCompletionHandler;
 
     /**
+     * A function that transforms row values before validation runs.
+     */
+    public $callbackTransformHandler;
+
+    /**
      * Import Data.
      */
     public CsvImportData $data;
@@ -42,11 +47,13 @@ class CsvRowImportJob implements ShouldQueue
         callable|string|array $callbackHandler,
         callable|string|array $callbackValidationErrorHandler,
         callable|string|array $callbackImportCompletionHandler,
+        callable|string|array $callbackTransformHandler,
         CsvImportData $data
     ) {
         $this->callbackHandler = $callbackHandler;
         $this->callbackValidationErrorHandler = $callbackValidationErrorHandler;
         $this->callbackImportCompletionHandler = $callbackImportCompletionHandler;
+        $this->callbackTransformHandler = $callbackTransformHandler;
         $this->data = $data;
     }
 
@@ -55,6 +62,8 @@ class CsvRowImportJob implements ShouldQueue
      */
     public function handle(): void
     {
+        $this->data->row = call_user_func($this->callbackTransformHandler, $this->data->row, $this->data);
+
         try {
             $this->data->row = Validator::make($this->data->row, $this->data->columns)->validate();
             call_user_func($this->callbackHandler, $this->data);

@@ -10,6 +10,15 @@ class ExampleCsvImporterService extends CsvImporterService
     public const string IMPORT_LABEL = 'Example Import';
 
     /**
+     * The field delimiter used when parsing the CSV file.
+     * Defaults to comma. Override for other formats:
+     *   "\t" → TSV (tab-separated)
+     *   ";"  → semicolon (common in European Excel exports)
+     *   "|"  → pipe-delimited
+     */
+    // protected string $delimiter = ',';
+
+    /**
      * Define the CSV columns and their validation rules.
      * Only columns listed here will be processed; all others are ignored.
      *
@@ -34,11 +43,34 @@ class ExampleCsvImporterService extends CsvImporterService
     ];
 
     /**
+     * Transform row values before validation runs.
+     *
+     * Use this to normalise or clean cell values. The $row array contains
+     * all CSV columns at this point (not yet filtered to $columns).
+     * Use $data->options for any import-specific context.
+     *
+     * @param array $row
+     * @param CsvImportData $data
+     */
+    public static function transformRow(array $row, CsvImportData $data): array
+    {
+        // TODO: implement your transformation logic here.
+        // Example:
+        // $row['Email'] = strtolower(trim($row['Email'] ?? ''));
+        // $row['Phone'] = preg_replace('/\D/', '', $row['Phone'] ?? '');
+        // $row['Name']  = ucwords(strtolower($row['Name'] ?? ''));
+
+        return $row;
+    }
+
+    /**
      * Process a single validated CSV row.
      *
      * This method is called once per row via the queue. The $data->row array
-     * contains only the columns defined in $columns, already validated.
-     * Use $data->options to access any extra context passed at import time.
+     * contains only the columns defined in $columns, already validated and
+     * transformed. Use $data->options to access any extra context passed at
+     * import time. Use $data->row_number for the 1-indexed row position in
+     * the original file (excluding the header row).
      *
      * @param CsvImportData $data
      */
