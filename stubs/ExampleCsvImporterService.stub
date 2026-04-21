@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Services\CSV;
+
+use Pvtl\CsvImporter\CsvImportData;
+use Pvtl\CsvImporter\CsvImporterService;
+
+class ExampleCsvImporterService extends CsvImporterService
+{
+    public const string IMPORT_LABEL = 'Example Import';
+
+    /**
+     * Define the CSV columns and their validation rules.
+     * Only columns listed here will be processed; all others are ignored.
+     *
+     * @see https://laravel.com/docs/validation#available-validation-rules
+     */
+    protected array $columns = [
+        'Name'  => ['required', 'string', 'max:255'],
+        'Email' => ['required', 'email', 'max:255'],
+        'Phone' => ['nullable', 'string', 'max:50'],
+    ];
+
+    /**
+     * Sample rows used to generate the downloadable example CSV.
+     * Keys must match the columns defined above.
+     */
+    protected static array $exampleCsv = [
+        [
+            'Name'  => 'Jane Smith',
+            'Email' => 'jane.smith@example.com',
+            'Phone' => '+61412345678',
+        ],
+    ];
+
+    /**
+     * Process a single validated CSV row.
+     *
+     * This method is called once per row via the queue. The $data->row array
+     * contains only the columns defined in $columns, already validated.
+     * Use $data->options to access any extra context passed at import time.
+     *
+     * @param CsvImportData $data
+     */
+    public static function handleRow(CsvImportData $data): void
+    {
+        $row = $data->row;
+
+        // TODO: implement your row processing logic here.
+        // Example:
+        // User::create([
+        //     'name'  => $row['Name'],
+        //     'email' => $row['Email'],
+        //     'phone' => $row['Phone'] ?? null,
+        // ]);
+    }
+
+    /**
+     * Called after the last row job completes.
+     *
+     * Use this to send notifications, update status records, or trigger
+     * any post-import side effects. Check $data->import_id to query
+     * FailedImportCsvRow records for this import.
+     *
+     * @param CsvImportData $data
+     */
+    public static function handleImportCompletion(CsvImportData $data): void
+    {
+        // TODO: implement your post-import logic here.
+        // Example:
+        // $failedCount = \Pvtl\CsvImporter\Models\FailedImportCsvRow::where('import_id', $data->import_id)->count();
+        // $user = auth()->user();
+        // $user?->notify(new ImportCompletedNotification(self::IMPORT_LABEL, $failedCount));
+    }
+}
