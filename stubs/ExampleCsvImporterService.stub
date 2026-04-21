@@ -52,6 +52,7 @@ class ExampleCsvImporterService extends CsvImporterService
         //     'name'  => $row['Name'],
         //     'email' => $row['Email'],
         //     'phone' => $row['Phone'] ?? null,
+        //     'password' => 'password'
         // ]);
     }
 
