@@ -1,0 +1,54 @@
+name: Auto-tag Version
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'composer.json'
+      - '.github/workflows/version-tag.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  tag-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from composer.json
+        id: version
+        run: |
+          VERSION=$(grep -oP '"version"\s*:\s*"\K[^"]+' composer.json)
+          if [ -z "$VERSION" ]; then
+            echo "No version found in composer.json, skipping tag creation"
+            exit 0
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_TAG=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: tag-check
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.VERSION }}" >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and push tag
+        if: steps.tag-check.outputs.TAG_EXISTS == 'false' && steps.version.outputs.VERSION != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.version.outputs.VERSION }}" -m "Release version ${{ steps.version.outputs.VERSION }}"
+          git push origin "v${{ steps.version.outputs.VERSION }}"
+
+      - name: Tag already exists
+        if: steps.tag-check.outputs.TAG_EXISTS == 'true'
+        run: |
+          echo "Tag v${{ steps.version.outputs.VERSION }} already exists, skipping"
