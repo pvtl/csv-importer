@@ -10,14 +10,6 @@ A Laravel package for background CSV imports via Laravel queue jobs. Each row in
 
 ## Installation
 
-Add the repository to your `composer.json`:
-
-```json
-"repositories": [
-    { "type": "vcs", "url": "https://github.com/pvtl/csv-importer" }
-]
-```
-
 Then require the package:
 
 ```bash
