@@ -8,6 +8,7 @@ class CsvImportData
         public array $row,
         public array $columns,
         public string $import_id,
+        public int $row_number,
         public bool $is_last_row = false,
         public array $options = [],
     ) {}
